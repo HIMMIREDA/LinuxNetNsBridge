@@ -83,7 +83,7 @@ iptables -t nat -A POSTROUTING -s ${BR_ADDR}/16 ! -o ${BR_DEV} -j MASQUERADE
 
 
 # install python to run a webserver
-apt update &&  apt install python 
+apt -y update &&  apt -y install python 
 
 # running a webserver inside ns1 namespace and trying to reach it from outside
 ip netns exec ${NS1} python3 -m http.server 80 &
