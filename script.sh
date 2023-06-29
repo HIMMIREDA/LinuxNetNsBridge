@@ -106,7 +106,20 @@ sh -c "echo 'nameserver 8.8.8.8' >> /etc/netns/${NS2}/resolv.conf;"
 
 
 
+# to solve the problem of no response (request from NS2) when executing ip netns exec $NS2 curl 10.10.0.1:8080 , the problem is that dist of request is not the src of response so the response and request are not put in same tcp connection we have two options: 
+# 1. activate hairpin NAT or 2. activate net.bridge.bridge-nf-call-iptables
+# we will use second so iptables rules will be applied to packets going through virtual bridges. In this way, the reply packet will also go through the reverse operation of DNAT, and its source address will be corrected to match the destination of the request.
+modprobe br_netfilter
+sysctl -w net.bridge.bridge-nf-call-iptables=1
 
+
+
+# to solve request from same namespace access (NS1) (ip netns exec  ns1 curl 10.10.0.1:8080)
+# we have to activate Hairpin NAT mode since the option net.bridge.bridge-nf-call-iptables does not work for access from the same namespace since the reply does not even go through the bridge, 
+iptables -t nat -A POSTROUTING -s 10.10.0.10 -d 10.10.0.10 -p tcp --dport 80 -j MASQUERADE
+
+# when we try again still no response .When we connect to port 8080 on the host from ns1, the packets arrive br0 through interface veth1 and get routed back through the same interface by our DNAT rule. The bridge will reject such “going back” routing if veth1’s hairpin mode is not turned on. To turn it on:
+ip link set veth1 type bridge_slave hairpin on
 
 
 
